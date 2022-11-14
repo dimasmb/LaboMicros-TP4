@@ -53,13 +53,15 @@ static int B_val;
 static bool was_giant_press = false;
 static tim_id_t press_count_timer;
 static tim_id_t anti_multi_turn_timer;
+static OS_SEM* enc_sem;
+static OS_ERR* enc_sem_err;
 
 /*******************************************************************************
  *******************************************************************************
                         GLOBAL FUNCTION DEFINITIONS
  *******************************************************************************
  ******************************************************************************/
-void DRV_Init_Switch(void)
+void DRV_Init_Switch(OS_SEM* semaphore, OS_ERR* err)
 {
 	gpioMode(PIN_RCHA, INPUT);		//No le pongo pullup porque el encoder ya lo tiene
 	gpioMode(PIN_RCHB, INPUT);
@@ -68,6 +70,8 @@ void DRV_Init_Switch(void)
 	gpioIRQ(PIN_RCHA, GPIO_IRQ_MODE_BOTH_EDGES, IRQ_RchA);
 	gpioIRQ(PIN_RSWITCH, GPIO_IRQ_MODE_FALLING_EDGE, IRQ_RSwitch);
 
+	enc_sem = semaphore;
+	enc_sem_err = err;
 	press_count_timer = timerGetId();
 	anti_multi_turn_timer = timerGetId();
 
@@ -104,6 +108,7 @@ static void makeTurn(void)
 		event_stack = ENC_TURN_CLOCK;
 	}
 	else event_stack = ENC_TURN_ANTI_CLOCK;
+	OSSemPost(enc_sem, OS_OPT_POST_ALL, enc_sem_err);
 }
  
 static void IRQ_RSwitch(void)
@@ -123,6 +128,7 @@ static void btnPressed(void)
 	if(counter>30)
 	{
 		event_stack = ENC_GIANT_PRESS;
+		OSSemPost(enc_sem, OS_OPT_POST_ALL, enc_sem_err);
 		was_giant_press = true;
 		counter = 0;
 	}
@@ -134,6 +140,7 @@ static void btnPressed(void)
 			if(!was_giant_press)
 			{
 				event_stack = ENC_SMALL_PRESS;
+				OSSemPost(enc_sem, OS_OPT_POST_ALL, enc_sem_err);
 			}
 			was_giant_press = false;
 		}
@@ -142,6 +149,7 @@ static void btnPressed(void)
 			if(!was_giant_press)
 			{
 				event_stack = ENC_LONG_PRESS;
+				OSSemPost(enc_sem, OS_OPT_POST_ALL, enc_sem_err);
 			}
 			was_giant_press = false;
 		}

@@ -12,6 +12,7 @@
  ******************************************************************************/
 #include <stdio.h>
 #include <stdbool.h>
+#include <os.h>
 
 /*******************************************************************************
  * CONSTANT AND MACRO DEFINITIONS USING #DEFINE
@@ -44,7 +45,7 @@ typedef enum{
  * @brief TODO: Inicializa el encoder.
  * @return Nada
 */
-void DRV_Init_Switch(void);
+void DRV_Init_Switch(OS_SEM* semaphore, OS_ERR* err);
 
 /**
  * @brief TODO: Devuelve el último evento del encoder.

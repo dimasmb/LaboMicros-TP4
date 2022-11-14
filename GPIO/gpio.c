@@ -100,7 +100,7 @@ bool gpioIRQ(pin_t pin, int tipo, punt_func_t callback){
 				PORTE->PCR[num] |= PORT_PCR_IRQC(modo);
 				CALLBACKS[OFFSET_PORTE + num] = callback; break; //127-159
 				//CALLBACKS[port]=callback;break;
-			default:printf("No se pudo configurar correctamente irqc del pcr del pin seleccionado");
+			default://printf("No se pudo configurar correctamente irqc del pcr del pin seleccionado");
 				break;
 		}
 		return 1;

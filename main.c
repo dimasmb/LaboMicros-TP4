@@ -28,64 +28,57 @@
 static OS_TCB TaskStartTCB;
 static CPU_STK TaskStartStk[TASKSTART_STK_SIZE];
 
-/* Task 2 */
-#define TASK2_STK_SIZE			256u
-#define TASK2_STK_SIZE_LIMIT	(TASK2_STK_SIZE / 10u)
-#define TASK2_PRIO              3u
-static OS_TCB Task2TCB;
-static CPU_STK Task2Stk[TASK2_STK_SIZE];
+/* Task Lectora*/
+#define TASK_lectora_STK_SIZE			256u
+#define TASK_lectora_STK_SIZE_LIMIT	(TASK_lectora_STK_SIZE / 10u)
+#define TASK_lectora_PRIO              2u
+static OS_TCB Task_lectora_TCB;
+static CPU_STK TaskLectoraStk[TASK_lectora_STK_SIZE];
+static OS_SEM semTest_lectora;
+
 
 /* Task 3 */
 #define TASK3_STK_SIZE			256u
 #define TASK3_STK_SIZE_LIMIT	(TASK3_STK_SIZE / 10u)
-#define TASK3_PRIO              3u
-static OS_TCB Task3TCB;
-static CPU_STK Task3Stk[TASK3_STK_SIZE];
+#define TASK3_PRIO              2u
+
+static OS_TCB TaskEncoder;
+static CPU_STK TaskEncoderStk[TASK3_STK_SIZE];
+static OS_SEM semTest_encoder;
+
 
 /* Message Queue */
 static OS_Q AppQ;
 
 /* Example semaphore */
-static OS_SEM semTest;
 
-static void Task3(void *p_arg)
+
+static void TaskEncoderFunc(void *p_arg)
 {
     (void)p_arg;
     OS_ERR os_err;
     CPU_TS ts;
-    void *p_msg;
-    OS_MSG_SIZE msg_size;
-    CPU_TS ts_delta;
 
-    p_arg=p_arg;
+    DRV_Init_Display();
+    DRV_Init_LEDs();
+    DRV_Init_Switch(&semTest_encoder, &os_err);
+    printDisplay();
     while (1) {
-        //OSSemPend(&semTest, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
-        p_msg = OSQPend(&AppQ,
-                &msg_size,
-                0,
-                OS_OPT_PEND_BLOCKING,
-                &ts,
-                &os_err);
-        ts_delta = OS_TS_GET() - ts;
-        OSTimeDly(100, OS_OPT_TIME_DLY,&os_err);    //Tick rate esta en 1000Hz
-        LED_B_TOGGLE();
+        OSSemPend(&semTest_encoder, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
+        encoder_process();
     }
 }
 
-static void Task2(void *p_arg) {
+static void TaskLectoraFunc(void *p_arg) {
     (void)p_arg;
     OS_ERR os_err;
+    CPU_TS ts;
 
-    p_arg=p_arg;
+    lectora_init(&semTest_lectora, &os_err);
+
     while (1) {
-        //OSSemPost(&semTest, OS_OPT_POST_1, &os_err);
-        OSQPost(&AppQ,
-                (void *)1,
-                sizeof(void *),
-                OS_OPT_POST_FIFO,
-                &os_err);
-        OSTimeDlyHMSM(0u, 0u, 0u, 500u, OS_OPT_TIME_HMSM_STRICT, &os_err);
-        LED_R_TOGGLE();
+        OSSemPend(&semTest_lectora, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
+        lectora_process();
     }
 }
 
@@ -106,49 +99,15 @@ static void TaskStart(void *p_arg) {
     CPU_IntDisMeasMaxCurReset();
 #endif
 
-    /* Create semaphore */
-    OSSemCreate(&semTest, "Sem Test", 0u, &os_err);
-
-    // /* Create Task2 */
-    // OSTaskCreate(&Task2TCB, 			//tcb
-    //              "Task 2",				//name
-    //               Task2,				//func
-    //               0u,					//arg
-    //               TASK2_PRIO,			//prio
-    //              &Task2Stk[0u],			//stack
-    //               TASK2_STK_SIZE_LIMIT,	//stack limit
-    //               TASK2_STK_SIZE,		//stack size
-    //               0u,
-    //               0u,
-    //               0u,
-    //              (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
-    //              &os_err);
-
-    //  /* Create Task3 */
-    // OSTaskCreate(&Task3TCB, 			//tcb
-    //              "Task 3",				//name
-    //               Task3,				//func
-    //               0u,					//arg
-    //               TASK3_PRIO,			//prio
-    //              &Task3Stk[0u],			//stack
-    //               TASK3_STK_SIZE_LIMIT,	//stack limit
-    //               TASK3_STK_SIZE,		//stack size
-    //               0u,
-    //               0u,
-    //               0u,
-    //              (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
-    //              &os_err);
 
     /******************
      * TP1
     */
-   hw_Init();
+   //hw_Init();
     hw_DisableInterrupts();
     timerInit();
-    lectora_init();
-    DRV_Init_Display();
-    DRV_Init_LEDs();
-    DRV_Init_Switch();
+
+
     DRV_FRDM_Init_LEDs();
     hw_EnableInterrupts();
 
@@ -166,7 +125,7 @@ static void TaskStart(void *p_arg) {
 				'0','0','0','0','0'}, .id = {4,8,9,6,5,7,8,4}, .password = {0,1,0,0,NAN}}};
 
 	loadUsers(list, 4);
-	printDisplay();
+	//printDisplay();
 	for (;;)
 	{
 		FSM_Run(&eNextState); /* Program-specific loop  */
@@ -181,6 +140,7 @@ static void TaskStart(void *p_arg) {
 
 int main(void) {
     OS_ERR err;
+    OS_ERR os_err;
 
 #if (CPU_CFG_NAME_EN == DEF_ENABLED)
     CPU_ERR  cpu_err;
@@ -225,6 +185,42 @@ int main(void) {
                   0u,
                  (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR | OS_OPT_TASK_SAVE_FP),
                  &err);
+
+    /* Create semaphore pal task_lectora*/
+    OSSemCreate(&semTest_lectora, "Sem Test_lectora", 0u, &os_err);
+    OSSemCreate(&semTest_encoder, "Sem Test_encoder", 0, &os_err);
+    
+
+    // /* Create Task_lectora*/
+    OSTaskCreate(&Task_lectora_TCB, 			//tcb
+                 "Task_lectora",				//name
+                   TaskLectoraFunc,				//func
+                   0u,					//arg
+                   TASK_lectora_PRIO ,			//prio
+                  &TaskLectoraStk[0u],			//stack
+                   TASK_lectora_STK_SIZE_LIMIT,	//stack limit
+                   TASK_lectora_STK_SIZE,		//stack size
+                   0u,
+                   0u,
+                   0u,
+                  (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+                  &os_err);
+
+      /* Create Task3 */
+     OSTaskCreate(&TaskEncoder, 			//tcb
+                  "Task Encoder",				//name
+                  TaskEncoderFunc,				//func
+                  0u,					//arg
+                  TASK3_PRIO,			//prio
+                  &TaskEncoderStk[0u],			//stack
+                  TASK3_STK_SIZE_LIMIT,	//stack limit
+                  TASK3_STK_SIZE,		//stack size
+                  0u,
+                  0u,
+                  0u,
+                  (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+                  &os_err);
+
 
     OSStart(&err);
 

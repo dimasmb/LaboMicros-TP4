@@ -96,6 +96,8 @@ void loadUsers(user userList[], int quantity);
 void printDisplay(void);
 
 void FSM_Run(eSystemState *nextState);
+void lectora_process();
+void encoder_process();
 #include "fsm.h"
 
 //handler de eventos

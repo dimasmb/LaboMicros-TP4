@@ -143,46 +143,15 @@ void FSM_Run(eSystemState *nextState)
  *******************************************************************************
  ******************************************************************************/
 
+
+static eSystemEvent evStack[100];
+static int pushPointer = -1;
+static int pullPointer = -1;
+
 eSystemEvent read_event()
 {
 
-	static eSystemEvent evStack[100];
-	static int pushPointer = -1;
-	static int pullPointer = -1;
 
-	int p = readLectoraStatus(); //eventos lectora de tarjeta
-	if (p==VALUEOK_) {
-		if (pushPointer++ > 99) { pushPointer = 0; }
-		evStack[pushPointer] = Card_Read;
-		readLectoraCardInfo(currUser.card);
-	}
-	else if (p==ERRORi_){
-		if (pushPointer++ > 99) { pushPointer = 0; }
-		evStack[pushPointer] = Card_Error;
-	}
-
-	int i = getEvent(); //eventos encoder
-	if (i) {
-
-		if (pushPointer++ > 99) { pushPointer = 0; }
-
-		switch (i) {
-		case ENC_TURN_CLOCK:
-			evStack[pushPointer] = Right_Turn;
-			break;
-		case ENC_TURN_ANTI_CLOCK:
-			evStack[pushPointer] = Left_Turn;
-			break;
-		case ENC_SMALL_PRESS:
-			evStack[pushPointer] = press;
-			break;
-		case ENC_LONG_PRESS:
-			evStack[pushPointer] = double_press;
-			break;
-		case ENC_GIANT_PRESS:
-			evStack[pushPointer] = giant_press;
-		}
-	}
 	if(pullPointer!=pushPointer){
 		if (pullPointer++ > 99) { pullPointer = 0; }
 		return evStack[pullPointer];
@@ -194,6 +163,44 @@ eSystemEvent read_event()
 
 
 }
+
+void lectora_process(){
+	int p = readLectoraStatus(); //eventos lectora de tarjeta
+		if (p==VALUEOK_) {
+			if (pushPointer++ > 99) { pushPointer = 0; }
+			evStack[pushPointer] = Card_Read;
+			readLectoraCardInfo(currUser.card);
+		}
+		else if (p==ERRORi_){
+			if (pushPointer++ > 99) { pushPointer = 0; }
+			evStack[pushPointer] = Card_Error;
+		}
+}
+void encoder_process(){
+	int i = getEvent(); //eventos encoder
+		if (i) {
+
+			if (pushPointer++ > 99) { pushPointer = 0; }
+
+			switch (i) {
+			case ENC_TURN_CLOCK:
+				evStack[pushPointer] = Right_Turn;
+				break;
+			case ENC_TURN_ANTI_CLOCK:
+				evStack[pushPointer] = Left_Turn;
+				break;
+			case ENC_SMALL_PRESS:
+				evStack[pushPointer] = press;
+				break;
+			case ENC_LONG_PRESS:
+				evStack[pushPointer] = double_press;
+				break;
+			case ENC_GIANT_PRESS:
+				evStack[pushPointer] = giant_press;
+			}
+		}
+}
+
 
 eSystemState wait_derivate(eSystemEvent newEvent) {
 	//printf("wait state\n");

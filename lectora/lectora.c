@@ -52,6 +52,8 @@ static uint32_t absIndex=0;
 static char lect_TimeOut=0;
 
 static tim_id_t timer_id_lect;
+static OS_SEM* semaphore;
+static OS_ERR* err;
 
 
 /*******************************************************************************
@@ -60,7 +62,7 @@ static tim_id_t timer_id_lect;
  *******************************************************************************
  ******************************************************************************/
 
-void lectora_init(){
+void lectora_init(OS_SEM* ext_semaphore, OS_ERR* ext_err){
 	// aca configuro los tres puertos a usar y las interrupciones.
 	gpioMode(PIN_DATA_LECT,INPUT);
 	gpioMode(PIN_ENABLE_LECT,INPUT);
@@ -68,10 +70,10 @@ void lectora_init(){
 
 	gpioIRQ(PIN_ENABLE_LECT,GPIO_IRQ_MODE_BOTH_EDGES,callback_changeStatus);
 	gpioIRQ(PIN_CLK_LECT,GPIO_IRQ_MODE_FALLING_EDGE,callback_saveCardValue);
+	semaphore=ext_semaphore;
+	err = ext_err;
 
 	timer_id_lect = timerGetId();
-
-
 }
 
 uint32_t readLectoraStatus(){
@@ -124,11 +126,13 @@ uint32_t readLectoraStatus(){
 	if(lect_TimeOut){
 		statusFlag=WAITING_;
 		lect_TimeOut=0;
-		printf("salio por timeout");
+		//printf("salio por timeout");
 	}
 
 	return lastStatus;
 }
+
+
 
 void  readLectoraCardInfo(char AppCardInfo[]){		//Esta funcion devuelve la tarjeta leida y la borra del registro.
 
@@ -141,8 +145,9 @@ void  readLectoraCardInfo(char AppCardInfo[]){		//Esta funcion devuelve la tarje
 			AppCardInfo[i]=(cardInformation[i] & 0b00001111) + 48;		// convierto a ASCII los caracteres numericos
 		}
 		cardInformation[i]=0;
-	}
+	}	
 	absIndex=0;
+
 }
 
 
@@ -206,6 +211,7 @@ static void callback_changeStatus(void){   // este es la interrup del flanco neg
 	}else if(bitEnable==1 && statusFlag == READING_){
 		timerStop(timer_id_lect);
 		statusFlag=FINISHED_;
+		OSSemPost(semaphore, OS_OPT_POST_ALL, err);
 	}
 	TurnOff_LED_FRDM_BLUE();
 }

@@ -13,6 +13,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include  <os.h>
 
 /*******************************************************************************
  * CONSTANT AND MACRO DEFINITIONS USING #DEFINE
@@ -44,7 +45,7 @@ enum{
  * FUNCTION PROTOTYPES WITH GLOBAL SCOPE
  ******************************************************************************/
 
-void lectora_init();
+void lectora_init(OS_SEM* semaphore, OS_ERR* err);
 uint32_t readLectoraStatus();
 void  readLectoraCardInfo(char AppCardInfo[40]);
 

@@ -18,7 +18,7 @@
  * CONSTANT AND MACRO DEFINITIONS USING #DEFINE
  ******************************************************************************/
 #define MAX_DIGIT 4
-#define DISPLAY_REFRESH_RATE_MS	0.2
+#define DISPLAY_REFRESH_RATE_MS	1
 
 enum{
 	DONT_POINT = -1,
