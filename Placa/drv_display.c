@@ -147,7 +147,7 @@ static tim_id_t timer_id;
 static char word[4];
 static float brillo;
 static int pointer_digit = -1;
-static float opciones_brillo[4] = {DISPLAY_REFRESH_RATE_MS, 2, 3, 4};
+static float opciones_brillo[4] = {DISPLAY_REFRESH_RATE_MS, 3, 4, 6};
 
 /*******************************************************************************
  *******************************************************************************

@@ -96,7 +96,7 @@ static void IRQ_RchA(void)
 	if(!timerExpired(anti_multi_turn_timer))
 	{
 		B_val = gpioRead(PIN_RCHB);
-		timerStart(anti_multi_turn_timer, TIMER_MS_2_TICKS(70), TIM_MODE_SINGLESHOT, makeTurn);
+		timerStart(anti_multi_turn_timer, TIMER_MS_2_TICKS(150), TIM_MODE_SINGLESHOT, makeTurn);
 	}
 	TurnOff_LED_FRDM_BLUE();
 }
@@ -125,7 +125,7 @@ static void btnPressed(void)
 {
 	static uint32_t counter = 0;
 	counter++;
-	if(counter>30)
+	if(counter>(40*4))
 	{
 		event_stack = ENC_GIANT_PRESS;
 		OSSemPost(enc_sem, OS_OPT_POST_ALL, enc_sem_err);
@@ -135,7 +135,7 @@ static void btnPressed(void)
 	if(gpioRead(PIN_RSWITCH))
 	{
 		timerStop(press_count_timer);
-		if(counter<=10)
+		if(counter<=40)
 		{
 			if(!was_giant_press)
 			{
@@ -144,7 +144,7 @@ static void btnPressed(void)
 			}
 			was_giant_press = false;
 		}
-		else if(counter<=30)
+		else if(counter<=(40*4))
 		{
 			if(!was_giant_press)
 			{
