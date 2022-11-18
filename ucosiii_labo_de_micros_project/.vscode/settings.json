@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "os.h": "c",
+        "lectora.h": "c",
+        "uart_drv.h": "c"
+    }
+}
