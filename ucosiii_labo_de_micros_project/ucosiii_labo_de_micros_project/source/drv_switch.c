@@ -96,7 +96,7 @@ static void IRQ_RchA(void)
 	if(!timerExpired(anti_multi_turn_timer))
 	{
 		B_val = gpioRead(PIN_RCHB);
-		timerStart(anti_multi_turn_timer, TIMER_MS_2_TICKS(150), TIM_MODE_SINGLESHOT, makeTurn);
+		timerStart(anti_multi_turn_timer, TIMER_MS_2_TICKS(300), TIM_MODE_SINGLESHOT, makeTurn);
 	}
 	TurnOff_LED_FRDM_BLUE();
 }
