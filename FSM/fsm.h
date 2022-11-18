@@ -17,8 +17,8 @@
 #include "drv_FRDM.h"
 #include "lectora.h"
 #include "timer.h"
+#include <os.h>
 
-#include <string.h>
 
 /*******************************************************************************
  * CONSTANT AND MACRO DEFINITIONS USING #DEFINE
@@ -81,7 +81,11 @@ typedef struct
 	int id[8];
 	char card[40];
 	int password[5];
+	int piso;
+	int in_house;
 } user;
+
+
 
 /*******************************************************************************
  * VARIABLE PROTOTYPES WITH GLOBAL SCOPE
@@ -92,12 +96,13 @@ typedef struct
 /*******************************************************************************
  * FUNCTION PROTOTYPES WITH GLOBAL SCOPE
  ******************************************************************************/
-void loadUsers(user userList[], int quantity);
+void loadUsers(user userList[], int quantity, OS_SEM* semaphore, OS_ERR* error_);
 void printDisplay(void);
 
 void FSM_Run(eSystemState *nextState);
 void lectora_process();
 void encoder_process();
+int get_floor_state();
 #include "fsm.h"
 
 //handler de eventos

@@ -31,6 +31,9 @@ static int adminAddMode = 0;
 static int adminDelMode = 0;
 static int currUserIndex=-1;
 
+static OS_SEM* ext_semaphore;
+static OS_ERR* err;
+
 
 /*******************************************************************************
  * FUNCTION PROTOTYPES FOR PRIVATE FUNCTIONS WITH FILE LEVEL SCOPE
@@ -109,7 +112,9 @@ static eSystemEvent local_nextEvent = last_Event;
 static bool admin_id = false;
 
 /*Función llenar usuarios permitidos*/
-void loadUsers(user userList[], int userQuantity) {
+void loadUsers(user userList[], int userQuantity, OS_SEM* semaphore, OS_ERR* error_) {
+	err = error_;
+	ext_semaphore = semaphore;
 	for (int i = 0; i < userQuantity; i++) {
 		registeredUsers[i] = userList[i];
 	}
@@ -463,7 +468,7 @@ eSystemState wait_pass_handler() {
 			for (int i = 0; i < usernum; i++) {
 				if (!allGood && compareCharArray(currUser.card, registeredUsers[i].card, (sizeof(currUser.card) / sizeof(char)))) {
 					allGood++;
-
+					currUserIndex=i;
 					for (int j = 0; j < MAX_NUM_PSW; j++) {
 						currUser.password[j] = registeredUsers[i].password[j];
 					}
@@ -593,7 +598,6 @@ eSystemState password_press_handler(void) {
 		currPointer.selected = 1;
 	}
 
-
 	return pswrd_Input_State;
 
 }
@@ -615,6 +619,17 @@ eSystemState password_doublepress_handler(void) {
 			for (i = 0; i < MAX_NUM_PSW; i++) {
 				currUser.password[i] = newPass[i];
 			}
+
+			
+			if (registeredUsers[currUserIndex].in_house == 1){
+				registeredUsers[currUserIndex].in_house = 0;
+			}
+			else{
+				registeredUsers[currUserIndex].in_house = 1;
+			}
+
+			//Semaforo va aca 
+			OSSemPost(ext_semaphore, OS_OPT_POST_ALL, err);
 
 		}
 	}
@@ -815,4 +830,13 @@ void saveNewUserPass(int currUserIndex){
 
 		registeredUsers[currUserIndex].password[i]=currUser.password[i];
 	}
+}
+
+int get_floor_state(){
+	    int p1, p2, p3;
+
+        p3 = registeredUsers[0].in_house + registeredUsers[1].in_house;
+        p2 = registeredUsers[2].in_house + registeredUsers[3].in_house;
+        p1 = registeredUsers[4].in_house + registeredUsers[5].in_house;
+		return 100*p1+10*p2+p3;
 }

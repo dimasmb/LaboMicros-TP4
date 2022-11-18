@@ -1,5 +1,7 @@
 #include "hardware.h"
 #include "fsm.h"
+#include "thingSpeakLib.h"
+#include "uart_drv.h"
 #include  <os.h>
 
 /* LEDs */
@@ -36,6 +38,14 @@ static OS_TCB Task_lectora_TCB;
 static CPU_STK TaskLectoraStk[TASK_lectora_STK_SIZE];
 static OS_SEM semTest_lectora;
 
+/* Task SendData*/
+#define TASK_SendData_STK_SIZE			256u
+#define TASK_SendData_STK_SIZE_LIMIT	(TASK_SendData_STK_SIZE / 10u)
+#define TASK_SendData_PRIO              2u
+static OS_TCB Task_SendData_TCB;
+static CPU_STK TaskSendDataStk[TASK_SendData_STK_SIZE];
+static OS_SEM semTest_SendData;
+
 
 /* Task 3 */
 #define TASK3_STK_SIZE			256u
@@ -46,12 +56,57 @@ static OS_TCB TaskEncoder;
 static CPU_STK TaskEncoderStk[TASK3_STK_SIZE];
 static OS_SEM semTest_encoder;
 
+static user list[6] = {//TARJETA 1
+		
+		//TARJETA ITBA ique
+		{.card = {';', '4','5','1','7','6','6','0','1','3','8','9','6','5','7','8','4',
+				'=','2','2','0','4','1','2','1','2','3','6','0','0','4','2','1','7','7',
+				'1','9','5','?','>'}, .id = {5,0,0,0,0,0,0,0}, .password = {1,0,0,0,NAN}, .piso = 3, .in_house = 0},
+
+		//SUBE joaco
+		{.card = {';', '6','0','6','1','2','6','8','2','6','4','8','5','8','2','2','2',
+				'=','2','5','0','6','1','0','1','0','0','0','0','0','?','2','0','0','0',
+				'0','0','0','0','0'}, .id = {6,0,0,0,0,0,0,0}, .password = {0,1,0,0,NAN}, .piso = 3, .in_house = 0},
+
+        {.card = {';','4','5','1','7','6','6','0','1','4','5','8','2','8','1','5','7',
+                '=','2','5','1','0','2','2','1','6','5','1','0','0','0','0','0','0','0',
+                '0','0','0','?',':'}, .id = {1,0,0,0,0,0,0,0}, .password = {1,0,0,0,NAN}, .piso = 2, .in_house = 0},
+        //TARJETA Santander Dimas
+		{.card = {';', '4','5','1','7','6','6','0','1','4','5','8','2','8','1','5','7',
+				'=','2','2','0','4','1','2','1','2','3','6','0','0','4','2','1','7','7',
+				'1','9','5','?','>'}, .id = {2,0,0,0,0,0,0,0}, .password = {1,0,0,0,NAN}, .piso = 2, .in_house = 0},
+
+        //TARJETA 3
+		{.card = {';', '4','5','1','7','6','6','0','1','3','8','9','6','5','7','8','4',
+				'=','2','2','0','4','1','2','1','2','3','6','0','0','4','2','1','7','7',
+				'1','9','5','?','>'}, .id = {3,0,0,0,0,0,0,0}, .password = {1,0,0,0,NAN}, .piso = 1, .in_house = 0},
+
+        //TARJETA 4
+		{.card = {';', '4','5','1','7','6','6','0','1','3','8','9','6','5','7','8','4',
+				'=','2','2','0','4','1','2','1','2','3','6','0','0','4','2','1','7','7',
+				'1','9','5','?','>'}, .id = {4,0,0,0,0,0,0,0}, .password = {1,0,0,0,NAN}, .piso = 1, .in_house = 0}
+};
 
 /* Message Queue */
 static OS_Q AppQ;
 
-/* Example semaphore */
+static void TaskSendDataFunc(void *p_arg) {
+    (void)p_arg;
+    OS_ERR os_err;
+    CPU_TS ts;
 
+    UART_Init(1200, 0);
+
+    while (1) {
+        OSSemPend(&semTest_SendData, 0, OS_OPT_PEND_BLOCKING, &ts, &os_err);
+
+        int p = get_floor_state();   //FUMA LOCOOO
+        int p1 = p/100;
+        int p2 = (p-(p1*100))/10;
+        int p3 = (p-(p2*10)-(p1*100));
+        sendData(p1, p2, p3);
+    }
+}
 
 static void TaskEncoderFunc(void *p_arg)
 {
@@ -112,19 +167,9 @@ static void TaskStart(void *p_arg) {
     hw_EnableInterrupts();
 
     eSystemState eNextState = wait_State;
-	user list[4] = {{.id = {1,0,0,0,0,0,0,0}, .password = {1,0,0,0,NAN}},
-		{.id = {2,0,0,0,0,0,0,0}, .password = {2,0,0,0,0}},
-		//TARJETA ITBA ique
-		{.card = {';', '4','5','1','7','6','6','0','1','3','8','9','6','5','7','8','4',
-				'=','2','2','0','4','1','2','1','2','3','6','0','0','4','2','1','7','7',
-				'1','9','5','?','>'}, .id = {3,8,9,6,5,7,8,4}, .password = {2,1,0,0,0}},
 
-		//SUBE joaco
-		{.card = {';', '6','0','6','1','2','6','8','2','6','4','8','5','8','2','2','2',
-				'=','2','5','0','6','1','0','1','0','0','0','0','0','?','2','0','0','0',
-				'0','0','0','0','0'}, .id = {4,8,9,6,5,7,8,4}, .password = {0,1,0,0,NAN}}};
 
-	loadUsers(list, 4);
+	loadUsers(list, 4, &semTest_SendData, &os_err);
 	//printDisplay();
 	for (;;)
 	{
@@ -189,7 +234,22 @@ int main(void) {
     /* Create semaphore pal task_lectora*/
     OSSemCreate(&semTest_lectora, "Sem Test_lectora", 0u, &os_err);
     OSSemCreate(&semTest_encoder, "Sem Test_encoder", 0, &os_err);
+    OSSemCreate(&semTest_SendData, "Sem Test_SendData", 0, &os_err);
     
+    // /* Create Task_SendData*/
+    OSTaskCreate(&Task_SendData_TCB, 			//tcb
+                 "Task_SendData",				//name
+                   TaskSendDataFunc,				//func
+                   0u,					//arg
+                   TASK_SendData_PRIO ,			//prio
+                  &TaskSendDataStk[0u],			//stack
+                   TASK_SendData_STK_SIZE_LIMIT,	//stack limit
+                   TASK_SendData_STK_SIZE,		//stack size
+                   0u,
+                   0u,
+                   0u,
+                  (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
+                  &os_err);
 
     // /* Create Task_lectora*/
     OSTaskCreate(&Task_lectora_TCB, 			//tcb
@@ -206,7 +266,7 @@ int main(void) {
                   (OS_OPT_TASK_STK_CHK | OS_OPT_TASK_STK_CLR),
                   &os_err);
 
-      /* Create Task3 */
+      /* Create Task_encoder */
      OSTaskCreate(&TaskEncoder, 			//tcb
                   "Task Encoder",				//name
                   TaskEncoderFunc,				//func
